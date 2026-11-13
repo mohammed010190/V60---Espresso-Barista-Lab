@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Barista Extraction Lab</title>
+    <style>
+        :root {
+            --bg: #0c0a09;
+            --card: #1c1917;
+            --border: #292524;
+            --gold: #d97706;
+            --amber: #f59e0b;
+            --text: #fafaf9;
+            --muted: #a8a29e;
+            --green: #10b981;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, Tahoma, sans-serif; }
+        body {
+            background: radial-gradient(circle at top right, #271c10, var(--bg) 60%);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .app {
+            width: min(720px, 100%);
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 22px;
+            padding: 24px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 14px;
+        }
+        .header h1 { font-size: 20px; color: var(--amber); }
+        .mode-switch { display: flex; gap: 8px; }
+        .mode-btn {
+            background: #0c0a09;
+            color: var(--muted);
+            border: 1px solid var(--border);
+            padding: 8px 16px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 700;
+            transition: 0.2s;
+        }
+        .mode-btn.active {
+            background: var(--gold);
+            color: #fff;
+            border-color: var(--amber);
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 14px;
+            margin-bottom: 18px;
+        }
+        .box {
+            background: #141210;
+            border: 1px solid var(--border);
+            padding: 16px;
+            border-radius: 16px;
+        }
+        .box label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+        .box input[type="range"] { width: 100%; accent-color: var(--amber); cursor: pointer; }
+        .val-big { font-size: 26px; font-weight: 800; color: var(--amber); margin-top: 6px; direction: ltr; text-align: right; }
+        .results {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 18px;
+        }
+        .res-card {
+            background: rgba(245, 158, 11, 0.08);
+            border: 1px solid rgba(245, 158, 11, 0.25);
+            border-radius: 14px;
+            padding: 12px;
+            text-align: center;
+        }
+        .res-card small { color: var(--muted); font-size: 11px; display: block; }
+        .res-card strong { font-size: 20px; color: #fff; display: block; margin-top: 4px; direction: ltr; }
+        .timer-panel {
+            background: #0c0a09;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 18px;
+            text-align: center;
+        }
+        .time-display {
+            font-size: 42px;
+            font-weight: 800;
+            font-family: monospace;
+            color: var(--green);
+            letter-spacing: 2px;
+        }
+        .stage-hint { font-size: 13px; color: var(--amber); margin: 8px 0 14px; min-height: 20px; }
+        .btn-row { display: flex; justify-content: center; gap: 10px; }
+        .btn {
+            border: none;
+            padding: 10px 22px;
+            border-radius: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        .btn-start { background: var(--green); color: #052e16; }
+        .btn-reset { background: #292524; color: var(--text); }
+    </style>
+</head>
+<body>
+
+<div class="app">
+    <div class="header">
+        <div>
+            <h1>☕ مختبر استخلاص القهوة المختصة</h1>
+            <p style="font-size:12px; color:var(--muted);">حاسبة الريشيو الذكية ومؤقت الصبات المباشر</p>
+        </div>
+        <div class="mode-switch">
+            <button class="mode-btn active" id="btnV60" onclick="setMethod('v60')">V60 تقطير</button>
+            <button class="mode-btn" id="btnEsp" onclick="setMethod('espresso')">Espresso إسبريسو</button>
+        </div>
+    </div>
+
+    <div class="grid">
+        <div class="box">
+            <label>وزن البن المطحون (غرام)</label>
+            <input type="range" id="coffeeSlider" min="10" max="35" step="0.5" value="20" oninput="calc()">
+            <div class="val-big" id="coffeeVal">20.0 g</div>
+        </div>
+        <div class="box">
+            <label>نسبة الاستخلاص (Ratio 1:X)</label>
+            <input type="range" id="ratioSlider" min="12" max="18" step="0.5" value="15" oninput="calc()">
+            <div class="val-big" id="ratioVal">1 : 15</div>
+        </div>
+    </div>
+
+    <div class="results">
+        <div class="res-card">
+            <small>إجمالي الماء / الاستخلاص</small>
+            <strong id="totalWater">300 ml</strong>
+        </div>
+        <div class="res-card">
+            <small id="subLabel1">صبة الترطيب (Bloom)</small>
+            <strong id="bloomWater">60 ml</strong>
+        </div>
+        <div class="res-card">
+            <small id="subLabel2">الوقت المثالي المقترح</small>
+            <strong id="targetTime">02:30</strong>
+        </div>
+    </div>
+
+    <div class="timer-panel">
+        <div class="time-display" id="timerTxt">00:00.0</div>
+        <div class="stage-hint" id="stageHint">اضغط "بدء الاستخلاص" لتشغيل المؤقت ومراحل الصب</div>
+        <div class="btn-row">
+            <button class="btn btn-start" id="startBtn" onclick="toggleTimer()">▶ بدء الاستخلاص</button>
+            <button class="btn btn-reset" onclick="resetTimer()">↺ تصفير</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let method = 'v60';
+    let running = false;
+    let startTime = 0;
+    let elapsed = 0;
+    let timerId = null;
+
+    function setMethod(m) {
+        method = m;
+        document.getElementById('btnV60').classList.toggle('active', m === 'v60');
+        document.getElementById('btnEsp').classList.toggle('active', m === 'espresso');
+        const rSlider = document.getElementById('ratioSlider');
+        const cSlider = document.getElementById('coffeeSlider');
+
+        if (m === 'espresso') {
+            cSlider.min = 14; cSlider.max = 22; cSlider.value = 18;
+            rSlider.min = 1.5; rSlider.max = 3; rSlider.step = 0.1; rSlider.value = 2.0;
+            document.getElementById('subLabel1').textContent = 'الترطيب المسبق (Pre-infusion)';
+            document.getElementById('targetTime').textContent = '00:28';
+        } else {
+            cSlider.min = 12; cSlider.max = 35; cSlider.value = 20;
+            rSlider.min = 13; rSlider.max = 18; rSlider.step = 0.5; rSlider.value = 15;
+            document.getElementById('subLabel1').textContent = 'صبة الترطيب (Bloom)';
+            document.getElementById('targetTime').textContent = '02:30';
+        }
+        resetTimer();
+        calc();
+    }
+
+    function calc() {
+        const coffee = parseFloat(document.getElementById('coffeeSlider').value);
+        const ratio = parseFloat(document.getElementById('ratioSlider').value);
+        const total = (coffee * ratio).toFixed(0);
+
+        document.getElementById('coffeeVal').textContent = coffee.toFixed(1) + ' g';
+        document.getElementById('ratioVal').textContent = '1 : ' + ratio;
+        document.getElementById('totalWater').textContent = total + (method === 'v60' ? ' ml' : ' g');
+        document.getElementById('bloomWater').textContent = (method === 'v60' ? (coffee * 3).toFixed(0) + ' ml' : '4 - 6 ثوانٍ');
+    }
+
+    function updateClock() {
+        const totalSec = elapsed / 1000;
+        const mins = String(Math.floor(totalSec / 60)).padStart(2, '0');
+        const secs = String(Math.floor(totalSec % 60)).padStart(2, '0');
+        const tenths = Math.floor((elapsed % 1000) / 100);
+        document.getElementById('timerTxt').textContent = `${mins}:${secs}.${tenths}`;
+
+        const hint = document.getElementById('stageHint');
+        if (method === 'v60') {
+            if (totalSec < 35) hint.textContent = '💧 المرحلة 1: صبة الترطيب (Bloom) وانتظار خروج الغازات...';
+            else if (totalSec < 75) hint.textContent = '🌀 المرحلة 2: الصبة الثانية الدائرية حتى 60% من كمية الماء...';
+            else if (totalSec < 135) hint.textContent = '☕ المرحلة 3: الصبة النهائية والوصول للوزن الكامل...';
+            else hint.textContent = '✅ اكتمل الاستخلاص المثالي! ارفع القمع واستمتع بالقهوة.';
+        } else {
+            if (totalSec < 6) hint.textContent = '💧 مرحلة الترطيب المسبق (Pre-infusion)...';
+            else if (totalSec <= 30) hint.textContent = '⚡ تدفق الإسبريسو المستقر (Sweet Spot)...';
+            else hint.textContent = '🛑 وصلت للوقت المثالي (28-30 ثانية) — أوقف الاستخلاص!';
+        }
+    }
+
+    function toggleTimer() {
+        const btn = document.getElementById('startBtn');
+        if (!running) {
+            running = true;
+            startTime = performance.now() - elapsed;
+            btn.textContent = '⏸ إيقاف مؤقت';
+            timerId = setInterval(() => {
+                elapsed = performance.now() - startTime;
+                updateClock();
+            }, 100);
+        } else {
+            running = false;
+            clearInterval(timerId);
+            btn.textContent = '▶ استكمال';
+        }
+    }
+
+    function resetTimer() {
+        running = false;
+        clearInterval(timerId);
+        elapsed = 0;
+        document.getElementById('timerTxt').textContent = '00:00.0';
+        document.getElementById('startBtn').textContent = '▶ بدء الاستخلاص';
+        document.getElementById('stageHint').textContent = 'اضغط "بدء الاستخلاص" لتشغيل المؤقت ومراحل الصب';
+    }
+
+    calc();
+</script>
+</body>
+</html>
